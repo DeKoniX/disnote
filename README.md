@@ -1,4 +1,4 @@
-# disnote
+# DisNote
 
 Disnote - это Discord бот для ведения заметок 
 
@@ -6,6 +6,7 @@ Disnote - это Discord бот для ведения заметок
 -help - покажет помощь
 -add - добавить заметку
 -del <num> - удалить заметку
+-clear - очистить канал и заного написать заметки
 ```
 
 Конфигурация бота должна находиться в `~/.config/disnote.yml`
@@ -15,5 +16,8 @@ Disnote - это Discord бот для ведения заметок
 discord:
   token: discord token
   channelid: id channel
+redis:
+  address: address redis server
+  password: password redis server
 ```
 

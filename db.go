@@ -2,12 +2,16 @@ package main
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"os/user"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func db_init() *sql.DB {
-	db, err := sql.Open("sqlite3", "./disnote.db")
+	usr, _ := user.Current()
+
+	db, err := sql.Open("sqlite3", usr.HomeDir+"/.config/disnote.db")
 	if err != nil {
 		log.Println(err)
 	}

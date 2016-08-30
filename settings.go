@@ -13,6 +13,10 @@ type Setting struct {
 		Token     string
 		ChannelID string
 	}
+	Redis struct {
+		Address  string
+		Password string
+	}
 }
 
 func Settings() (setting Setting) {

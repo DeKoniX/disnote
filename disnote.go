@@ -8,16 +8,21 @@ import (
 	"strings"
 	"time"
 
+	redis "gopkg.in/redis.v4"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 var BotID string
 var ChannelID string
 var DB *sql.DB
+var RClient *redis.Client
 
 func main() {
 	setting := Settings()
 	ChannelID = setting.Discord.ChannelID
+
+	RClient = RedisClient(setting.Redis.Address, setting.Redis.Password)
 
 	DB = db_init()
 	go run_bot(setting.Discord.Token)
@@ -55,10 +60,11 @@ func run_bot(token string) {
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	_ = s.UpdateStatus(0, "DisNote - ThisIsNotes!")
 
-	clear_channel(s)
+	clearChannel(s)
+	postAllMess(s)
 }
 
-func clear_channel(s *discordgo.Session) {
+func clearChannel(s *discordgo.Session) {
 	var mass_message_id []string
 
 	mass_message, err := s.ChannelMessages(ChannelID, 100, "", "")
@@ -81,11 +87,20 @@ func clear_channel(s *discordgo.Session) {
 			log.Println(err)
 		}
 	}
+}
 
+func postAllMess(s *discordgo.Session) {
 	rows := db_select(DB)
 	for _, row := range rows {
 		str := fmt.Sprintf("%d -> %s (<@%s>)", row.id, row.text, row.user_id)
-		_, _ = s.ChannelMessageSend(ChannelID, str)
+		mess, _ := s.ChannelMessageSend(ChannelID, str)
+		err := RedisSetMessage(RClient, Message{
+			noteId:    int(row.id),
+			messageId: mess.ID,
+		})
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 }
 
@@ -99,10 +114,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "-add") {
-		id := db_insert(DB, strings.TrimPrefix(m.Content, "!add"), m.Author.ID)
+		id := db_insert(DB, strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
 
 		str := fmt.Sprintf("%d -> %s (<@%s>)", id, strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
-		_, _ = s.ChannelMessageSend(ChannelID, str)
+		mess, _ := s.ChannelMessageSend(ChannelID, str)
+
+		err := RedisSetMessage(RClient, Message{
+			noteId:    int(id),
+			messageId: mess.ID,
+		})
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 
 	if strings.HasPrefix(m.Content, "-del ") {
@@ -111,9 +134,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			send_sleep_and_del("Введите пожалуйста число -del *num*", s)
 		} else {
 			if db_delete(DB, id) == true {
+				mess, err := RedisGetMessage(RClient, id)
+				if err != nil {
+					log.Panic(err)
+				}
+				IDMess := fmt.Sprintf("%v", mess[0])
+				_ = s.ChannelMessageDelete(ChannelID, IDMess)
+				err = RedisDelMessage(RClient, id)
+				if err != nil {
+					log.Panic(err)
+				}
 				str := fmt.Sprintf("Заметка %v удалена", id)
 				send_sleep_and_del(str, s)
-				clear_channel(s)
 			} else {
 				str := fmt.Sprintf("Заметка %v не существует", id)
 				send_sleep_and_del(str, s)
@@ -121,8 +153,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 
+	if m.Content == "-clear" {
+		clearChannel(s)
+		postAllMess(s)
+	}
+
 	if m.Content == "-help" {
-		send_sleep_and_del("-add - добавить заметку\n-del <num> - удалить заметку", s)
+		send_sleep_and_del("\n-add - добавить заметку\n-del <num> - удалить заметку\n-clear - очистить канал и заного написать заметки", s)
 	}
 
 	_ = s.ChannelMessageDelete(ChannelID, m.ID)
