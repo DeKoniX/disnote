@@ -1,9 +1,11 @@
 package main
 
 import (
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
+	"os/user"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Setting struct {
@@ -15,10 +17,11 @@ type Setting struct {
 
 func Settings() (setting Setting) {
 	setting = Setting{}
+	usr, _ := user.Current()
 
-	dat, err := ioutil.ReadFile("./config.yml")
+	dat, err := ioutil.ReadFile(usr.HomeDir + "/.config/disnote.yml")
 	if err != nil {
-		log.Println("Нет файла настроек: ", err)
+		log.Panicln("Нет файла настроек: ", err)
 	}
 
 	err = yaml.Unmarshal(dat, &setting)

@@ -3,11 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/bwmarrin/discordgo"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 var BotID string
@@ -108,22 +109,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		id, err := strconv.Atoi(strings.TrimPrefix(m.Content, "-del "))
 		if err != nil {
 			send_sleep_and_del("Введите пожалуйста число -del *num*", s)
-			// mess, _ := s.ChannelMessageSend(ChannelID, "Введите пожалуйста число !del *num*")
-			// time.Sleep(time.Second * 10)
-			// _ = s.ChannelMessageDelete(ChannelID, mess.ID)
 		} else {
 			if db_delete(DB, id) == true {
 				str := fmt.Sprintf("Заметка %v удалена", id)
 				send_sleep_and_del(str, s)
-				// _, _ = s.ChannelMessageSend(ChannelID, str)
-				// time.Sleep(time.Second * 5)
 				clear_channel(s)
 			} else {
 				str := fmt.Sprintf("Заметка %v не существует", id)
 				send_sleep_and_del(str, s)
-				// mess, _ := s.ChannelMessageSend(ChannelID, str)
-				// time.Sleep(time.Second * 10)
-				// _ = s.ChannelMessageDelete(ChannelID, mess.ID)
 			}
 		}
 	}

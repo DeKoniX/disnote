@@ -8,7 +8,8 @@ Disnote - это Discord бот для ведения заметок
 -del <num> - удалить заметку
 ```
 
-Конфигурация бота в файле config.yml
+Конфигурация бота должна находиться в `~/.config/disnote.yml`
+Пример конфигурации находится в файле `disnote.yml.example`
 
 ```yaml
 discord:
