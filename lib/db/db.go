@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -8,12 +8,20 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func db_init() *sql.DB {
-	usr, _ := user.Current()
+type DB struct {
+	db *sql.DB
+}
 
-	db, err := sql.Open("sqlite3", usr.HomeDir+"/.config/disnote.db")
+var DataBase DB
+
+func init() {
+	var err error
+
+	usr, _ := user.Current()
+	DataBase.db, err = sql.Open("sqlite3", usr.HomeDir+"/.config/disnote.db")
+
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 
 	sqlStmt := `
@@ -23,27 +31,21 @@ func db_init() *sql.DB {
 				user_id text not null
 		);
 		`
-
-	_, _ = db.Exec(sqlStmt)
-	// if err != nil {
-	// 	log.Println("%q: %s", err, sqlStmt)
-	// }
-
-	return db
+	_, _ = DataBase.db.Exec(sqlStmt)
 }
 
-func db_insert(db *sql.DB, text, user_id string) (id int64) {
-	tx, err := db.Begin()
+func (DataBase *DB) dbInsert(text, user_id string) (id int64) {
+	tx, err := DataBase.db.Begin()
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 
 	stmt, err := tx.Prepare("insert into note(text, user_id) values(?, ?)")
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 	defer stmt.Close()
-	result, err := stmt.Exec(text, user_id)
+	result, _ := stmt.Exec(text, user_id)
 	tx.Commit()
 
 	id, _ = result.LastInsertId()
@@ -57,10 +59,10 @@ type Rows struct {
 	user_id string
 }
 
-func db_select(db *sql.DB) (select_rows []Rows) {
-	rows, err := db.Query("select id, text, user_id from note")
+func (DataBase *DB) dbSelect() (select_rows []Rows) {
+	rows, err := DataBase.db.Query("select id, text, user_id from note")
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 	defer rows.Close()
 
@@ -76,8 +78,8 @@ func db_select(db *sql.DB) (select_rows []Rows) {
 	return select_rows
 }
 
-func db_delete(db *sql.DB, id int) bool {
-	result, err := db.Exec("delete from note where id = ?", id)
+func (DataBase *DB) dbDelete(id int) bool {
+	result, err := DataBase.db.Exec("delete from note where id = ?", id)
 	if err != nil {
 		log.Println(err)
 		return false

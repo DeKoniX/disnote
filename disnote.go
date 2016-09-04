@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
@@ -10,12 +9,13 @@ import (
 
 	redis "gopkg.in/redis.v4"
 
+	db "github.com/DeKoniX/disnote/lib/db"
 	"github.com/bwmarrin/discordgo"
 )
 
 var BotID string
 var ChannelID string
-var DB *sql.DB
+var DB db.DB
 var RClient *redis.Client
 
 func main() {
@@ -24,8 +24,9 @@ func main() {
 
 	RClient = RedisClient(setting.Redis.Address, setting.Redis.Password)
 
-	DB = db_init()
-	go run_bot(setting.Discord.Token)
+	// DB = db_init()
+	DB = db.DataBase
+	go runBot(setting.Discord.Token)
 
 	log.Println("Бот запущен")
 
@@ -33,7 +34,7 @@ func main() {
 	return
 }
 
-func run_bot(token string) {
+func runBot(token string) {
 	dg, err := discordgo.New(token)
 	if err != nil {
 		log.Println("Не могу провести авторизацию: ", err)
@@ -90,7 +91,7 @@ func clearChannel(s *discordgo.Session) {
 }
 
 func postAllMess(s *discordgo.Session) {
-	rows := db_select(DB)
+	rows := *DB.dbSelect()
 	for _, row := range rows {
 		str := fmt.Sprintf("%d -> %s (<@%s>)", row.id, row.text, row.user_id)
 		mess, _ := s.ChannelMessageSend(ChannelID, str)
@@ -114,7 +115,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "-add") {
-		id := db_insert(DB, strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
+		id := DB.dbInsert(strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
 
 		str := fmt.Sprintf("%d -> %s (<@%s>)", id, strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
 		mess, _ := s.ChannelMessageSend(ChannelID, str)
@@ -133,7 +134,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if err != nil {
 			send_sleep_and_del("Введите пожалуйста число -del *num*", s)
 		} else {
-			if db_delete(DB, id) == true {
+			if DB.dbDelete(id) == true {
 				mess, err := RedisGetMessage(RClient, id)
 				if err != nil {
 					log.Panic(err)
