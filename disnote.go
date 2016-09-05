@@ -26,6 +26,7 @@ func main() {
 
 	// DB = db_init()
 	DB = db.DataBase
+	// fmt.Printf("%+v\n", DB.db)
 	go runBot(setting.Discord.Token)
 
 	log.Println("Бот запущен")
@@ -91,12 +92,14 @@ func clearChannel(s *discordgo.Session) {
 }
 
 func postAllMess(s *discordgo.Session) {
-	rows := *DB.dbSelect()
+	var rows []db.Rows
+
+	rows = DB.Select()
 	for _, row := range rows {
-		str := fmt.Sprintf("%d -> %s (<@%s>)", row.id, row.text, row.user_id)
+		str := fmt.Sprintf("%d -> %s (<@%s>)", row.Id, row.Text, row.UserId)
 		mess, _ := s.ChannelMessageSend(ChannelID, str)
 		err := RedisSetMessage(RClient, Message{
-			noteId:    int(row.id),
+			noteId:    int(row.Id),
 			messageId: mess.ID,
 		})
 		if err != nil {
@@ -115,7 +118,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "-add") {
-		id := DB.dbInsert(strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
+		id := DB.Insert(strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
 
 		str := fmt.Sprintf("%d -> %s (<@%s>)", id, strings.TrimPrefix(m.Content, "-add"), m.Author.ID)
 		mess, _ := s.ChannelMessageSend(ChannelID, str)
@@ -134,7 +137,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if err != nil {
 			send_sleep_and_del("Введите пожалуйста число -del *num*", s)
 		} else {
-			if DB.dbDelete(id) == true {
+			if DB.Delete(id) == true {
 				mess, err := RedisGetMessage(RClient, id)
 				if err != nil {
 					log.Panic(err)

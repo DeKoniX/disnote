@@ -9,10 +9,11 @@ import (
 )
 
 type DB struct {
-	db *sql.DB
+	db     *sql.DB
+	config string
 }
 
-var DataBase DB
+var DataBase = DB{config: "./.config/"}
 
 func init() {
 	var err error
@@ -34,7 +35,7 @@ func init() {
 	_, _ = DataBase.db.Exec(sqlStmt)
 }
 
-func (DataBase *DB) dbInsert(text, user_id string) (id int64) {
+func (DataBase *DB) Insert(text, user_id string) (id int64) {
 	tx, err := DataBase.db.Begin()
 	if err != nil {
 		log.Panicln(err)
@@ -54,12 +55,12 @@ func (DataBase *DB) dbInsert(text, user_id string) (id int64) {
 }
 
 type Rows struct {
-	id      int
-	text    string
-	user_id string
+	Id     int
+	Text   string
+	UserId string
 }
 
-func (DataBase *DB) dbSelect() (select_rows []Rows) {
+func (DataBase *DB) Select() (select_rows []Rows) {
 	rows, err := DataBase.db.Query("select id, text, user_id from note")
 	if err != nil {
 		log.Panicln(err)
@@ -78,7 +79,7 @@ func (DataBase *DB) dbSelect() (select_rows []Rows) {
 	return select_rows
 }
 
-func (DataBase *DB) dbDelete(id int) bool {
+func (DataBase *DB) Delete(id int) bool {
 	result, err := DataBase.db.Exec("delete from note where id = ?", id)
 	if err != nil {
 		log.Println(err)
