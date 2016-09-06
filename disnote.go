@@ -10,19 +10,24 @@ import (
 	redis "gopkg.in/redis.v4"
 
 	db "github.com/DeKoniX/disnote/lib/db"
+	redis "github.com/DeKoniX/disnote/lib/db"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 var BotID string
 var ChannelID string
 var DB db.DB
-var RClient *redis.Client
+
+// var RClient *redis.Client
+var Redis *redis.Client
 
 func main() {
 	setting := Settings()
 	ChannelID = setting.Discord.ChannelID
 
-	RClient = RedisClient(setting.Redis.Address, setting.Redis.Password)
+	// RClient = RedisClient(setting.Redis.Address, setting.Redis.Password)
+	Redis = redis.Client
 
 	// DB = db_init()
 	DB = db.DataBase
