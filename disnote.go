@@ -34,7 +34,7 @@ func main() {
 }
 
 func run_bot(token string) {
-	dg, err := discordgo.New(token)
+	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
 		log.Println("Не могу провести авторизацию: ", err)
 		return
